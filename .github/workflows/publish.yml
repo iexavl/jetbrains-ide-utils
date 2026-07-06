@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PLUGIN_ID: com.hamel.ideutils
-      SINCE_BUILD: "233"
+      SINCE_BUILD: "253"
       REPO_TAG: repository            # fixed release that holds updatePlugins.xml
       GH_TOKEN: ${{ github.token }}
     steps:

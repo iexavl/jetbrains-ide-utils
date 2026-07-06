@@ -19,3 +19,12 @@ dependencies {
         // bundledPlugin("com.intellij.java")
     }
 }
+
+intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = "253"
+            untilBuild = provider { null }   // no upper bound; works on newer IDEs
+        }
+    }
+}
