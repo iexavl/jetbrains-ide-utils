@@ -1,0 +1,86 @@
+# Build the plugin on a version tag (v*) and publish it to a single-plugin repository
+# hosted entirely on GitHub Releases. The version comes from the tag (v1.2.3 -> 1.2.3),
+# so the built zip and the updatePlugins.xml entry always agree.
+#
+# Layout:
+#   - Each version tag gets its own Release; the plugin zip is an asset on it, giving
+#     a permanent download URL.
+#   - A single fixed Release tagged `repository` holds updatePlugins.xml. Its asset URL
+#     is a stable URL; it's regenerated and re-uploaded on
+#     every publish.
+#
+name: Publish plugin repository
+on:
+  push:
+    tags: [ 'v*' ]
+
+concurrency:
+  group: publish-repo
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build & publish to GitHub Releases
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_ID: com.hamel.ideutils
+      SINCE_BUILD: "233"
+      REPO_TAG: repository            # fixed release that holds updatePlugins.xml
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Derive version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build plugin
+        run: ./gradlew buildPlugin -Pversion=${{ steps.ver.outputs.version }}
+
+      - name: Locate built zip
+        id: zip
+        run: |
+          path=$(ls build/distributions/*.zip | head -n1)
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$path")" >> "$GITHUB_OUTPUT"
+
+      - name: Create version release and upload zip
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Release $GITHUB_REF_NAME" \
+            "${{ steps.zip.outputs.path }}" \
+          || gh release upload "$GITHUB_REF_NAME" "${{ steps.zip.outputs.path }}" --clobber
+
+      - name: Generate updatePlugins.xml
+        run: |
+          ZIP_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${{ steps.zip.outputs.name }}"
+          cat > updatePlugins.xml <<EOF
+          <plugins>
+            <plugin id="${PLUGIN_ID}" url="${ZIP_URL}" version="${{ steps.ver.outputs.version }}">
+              <idea-version since-build="${SINCE_BUILD}"/>
+            </plugin>
+          </plugins>
+          EOF
+
+      - name: Publish updatePlugins.xml to the fixed repository release
+        run: |
+          gh release view "$REPO_TAG" >/dev/null 2>&1 || \
+            gh release create "$REPO_TAG" \
+              --title "Plugin repository" \
+              --notes "Custom plugin repository index. Register this asset's URL in the IDE." \
+              --latest=false
+          gh release upload "$REPO_TAG" updatePlugins.xml --clobber

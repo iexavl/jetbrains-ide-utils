@@ -1,0 +1,42 @@
+<idea-plugin>
+    <id>com.hamel.ideutils</id>
+    <name>IDE Utils</name>
+    <vendor email="ndk4work@gmail.com">hamel</vendor>
+
+    <description><![CDATA[
+        A small collection of IDE utilities.<br><br>
+        Included:
+        <ul>
+            <li><b>External file picker</b> &mdash; launch any external file-picker command
+                and open the chosen file in the IDE</li>
+            <li><b>Copy Project Root</b> &mdash; copy the current project's root directory
+                path to the system clipboard.</li>
+        </ul>
+        <b>Getting started:</b> see the
+        <a href="https://github.com/iexavl/jetbrains-ide-utils">project page on GitHub</a>
+        for setup, the picker contract, and an example picker built with broot.
+        ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="IDE Utils" displayType="BALLOON"/>
+        <applicationService serviceImplementation="com.hamel.ideutils.IdeUtilSettings"/>
+        <applicationConfigurable
+                parentId="tools"
+                id="com.hamel.ideutils.settings"
+                displayName="IDE Utils"
+                instance="com.hamel.ideutils.IdeUtilsConfigurable"/>
+    </extensions>
+
+    <actions>
+        <action id="com.hamel.ideutils.PickFile"
+                class="com.hamel.ideutils.PickFileAction"
+                text="Pick file with an external file picker."
+                description="Run an external file picker, open the picked file here"/>
+        <action id="com.hamel.ideutils.CopyProjectRoot"
+                class="com.hamel.ideutils.CopyProjectRootAction"
+                text="Copy Project Root"
+                description="Copy the current project's root directory path to the clipboard"/>
+    </actions>
+</idea-plugin>
